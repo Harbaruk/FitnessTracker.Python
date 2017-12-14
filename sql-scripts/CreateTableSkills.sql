@@ -1,0 +1,7 @@
+CREATE TABLE Skills
+(
+	Id INT IDENTITY(1,1) PRIMARY KEY,
+	UserId INT,
+	Title VARCHAR(50),
+	Level INT
+);

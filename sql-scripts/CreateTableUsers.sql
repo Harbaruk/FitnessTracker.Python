@@ -1,0 +1,11 @@
+CREATE TABLE Users(
+Id INT IDENTITY(1,1) PRIMARY KEY,
+Name VARCHAR(25),
+Surname VARCHAR(25),
+DateOfBirth DATE,
+Email VARCHAR(50),
+Password VARCHAR(50),
+Address VARCHAR(100),
+Phone VARCHAR(20),
+userType INT
+);

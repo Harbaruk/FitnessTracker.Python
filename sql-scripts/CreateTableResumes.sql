@@ -1,0 +1,7 @@
+CREATE TABLE Resumes
+(
+	Id INT IDENTITY(1,1) PRIMARY KEY,
+	userId INT,
+	Title VARCHAR(50),
+	URL VARCHAR(255)
+);

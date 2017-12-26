@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, Blueprint
 from flask import request
 from flask import jsonify
 from flask_cors import CORS
@@ -10,6 +10,10 @@ import requests
 
 app = Flask(__name__)
 CORS(app)
+
+news_controller = Blueprint('news_controller',__name__,url_prefix='/api/news')
+
+app.register_blueprint(news_controller)
 
 @app.route('/api/registration', methods=['POST'])
 def api_registration():
@@ -32,7 +36,7 @@ def api_registration():
         response = jsonify({'status' : 0, 'message': 'Unable to connect to the database'})
         return response
     sql = """\
-    EXEC [dbo].[CreateNewUser] @email=?,
+    EXEC [dbo].[uspCreateNewUser]  @email=?,
                             	@password=?,
                             	@firstname=?,
                             	@lastname=?,
@@ -43,7 +47,7 @@ def api_registration():
                                 @weight=?
     """
     userType = ((0, 1)[ data['userType'] == "User" ])
-    params = (data['email'], data['password'], data['firstname'], data['lastname'], data['age'], data['height'], data['sex'], date['weight'], userType)
+    params = (data['email'], data['password'], data['firstname'], data['lastname'],0, data['age'], data['height'], data['sex'], data['weight'])
     cursor = connection.cursor()
     cursor.execute(sql, params)
     result = cursor.fetchall()
@@ -139,7 +143,7 @@ class Auth:
     
 class User:
     @staticmethod
-    @app.route('/api/user/<id>', methods = ['POST'])
+    @app.route('/api/user/<int:id>', methods = ['POST'])
     def UserInfo(id):
         data = request.get_json()
         userId = 0
@@ -216,7 +220,6 @@ class User:
         cursor.close()
         connection.close()
 
-
 class Plan:
     @staticmethod
     @app.route('/api/user/plan/get',methods=['POST'])
@@ -248,7 +251,7 @@ class Plan:
         return response
 
     @staticmethod
-    @app.route('/api/user/plan/<id>', methods = ['PUT'])
+    @app.route('/api/user/plan/<int:id>', methods = ['PUT'])
     def UpdatePlan(id):
         data = request.get_json()
         connection = DBConnection.NewConnection()
@@ -276,7 +279,7 @@ class Plan:
         return response
         
     @staticmethod
-    @app.route('/api/user/plan/<id>/<token>',methods=['DELETE'])
+    @app.route('/api/user/plan/<int:id>/<token>',methods=['DELETE'])
     def DeletePlan(id, token):
         connection = DBConnection.NewConnection()
         sql = """\
@@ -298,11 +301,10 @@ class Plan:
         
         response = jsonify({'status' : 1, 'message': 'Resume was successfully added'})
         return response
-
    
 class Block:
     @staticmethod
-    @app.route('/api/user/block/<id>', methods = ['POST'])
+    @app.route('/api/user/block/<int:id>', methods = ['POST'])
     def getFullPlanInfo(id):
          data = request.get_json()
          planId = id
@@ -360,7 +362,7 @@ class Block:
         connection.close()
 
     @staticmethod
-    @app.route('/api/user/block/<id>/<token>', methods = ['DELETE'])
+    @app.route('/api/user/block/<int:id>/<token>', methods = ['DELETE'])
     def DeleteBlock():
         connection = DBConnection.NewConnection()
         data = request.get_json()
@@ -454,12 +456,12 @@ class Exercise:
         cursor.close()
         connection.close()
 
-class News:
-    @staticmethod
-    @app.route('/api/news', methods=['GET'])
-    def GetNews():
-        apiUrl = 'https://newsapi.org/v2/everything?sources=nfl-news&sortBy=popularitylanguage=en&apiKey=5cf0ee4070bc4d38ab89ea05bec9935a'
-        return requests.get(apiUrl).content
+# class News:
+#     @staticmethod
+#     @app.route('/', methods=['GET'])
+#     def GetNews():
+        # apiUrl = 'https://newsapi.org/v2/everything?sources=nfl-news&sortBy=popularitylanguage=en&apiKey=5cf0ee4070bc4d38ab89ea05bec9935a'
+        # return requests.get(apiUrl).content
 
 if __name__ == "__main__":
     app.run()

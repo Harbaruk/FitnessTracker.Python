@@ -1,6 +1,6 @@
 import pypyodbc
 
-connection = pypyodbc.connect(driver='{SQL Server}', server='(local)\SQLEXPRESS2014', database='WorkIT', uid='sa', pwd='P@ssw0rd')
+connection = pypyodbc.connect(driver='{SQL Server}', server='(localdb)\mssqllocaldb', database='FitnessTracker', uid='grisha', pwd='password')
 
 if (connection):
     cursor = connection.cursor()

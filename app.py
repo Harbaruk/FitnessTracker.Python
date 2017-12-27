@@ -46,8 +46,8 @@ def api_registration():
                                 @sex=?,
                                 @weight=?
     """
-    userType = ((0, 1)[ data['userType'] == "User" ])
-    params = (data['email'], data['password'], data['firstname'], data['lastname'],0, data['age'], data['height'], data['sex'], data['weight'])
+
+    params = (data['email'], data['password'], data['firstname'], data['lastname'],data['userType'], data['age'], data['height'], data['sex'], data['weight'])
     cursor = connection.cursor()
     cursor.execute(sql, params)
     result = cursor.fetchall()
@@ -71,7 +71,7 @@ def generate_token():
 
 class Auth:
     @staticmethod
-    @app.route('/api/user/checkAuth/<id>', methods = ['POST'])
+    @app.route('/api/user/checkAuth', methods = ['POST'])
     def checkAuth():
          data = request.get_json()
          userId = 0;
@@ -101,10 +101,10 @@ class Auth:
          
          status = result[0][0]
          userType = result[0][1]
-         return jsonify({'status': status, 'userType': userType});
+         return jsonify({'status': status, 'userType': userType})
     
     @staticmethod
-    @app.route('/api/user/Auth/', methods = ['POST'])
+    @app.route('/api/user/auth', methods = ['POST'])
     def Auth():
         data  = request.get_json()
         email = ""
@@ -143,7 +143,7 @@ class Auth:
     
 class User:
     @staticmethod
-    @app.route('/api/user/<int:id>', methods = ['POST'])
+    @app.route('/api/user', methods = ['POST'])
     def UserInfo(id):
         data = request.get_json()
         userId = 0
@@ -202,17 +202,39 @@ class User:
             response = jsonify({'status' : 0, 'message': 'Unable to connect to the database'})
             return response
         sql = """\
-        EXEC [dbo].[UpdateUser]  @firstname=?
-                                 @lastname=?
-                                 @email=?
-                                 @sex=?
-                                 @height=?
-                                 @weight=?
-                                 @age=?
+        EXEC [dbo].[UpdateUser]  @firstname=?,
+                                 @lastname=?,
+                                 @email=?,
+                                 @sex=?,
+                                 @height=?,
+                                 @weight=?,
+                                 @age=?,
                                  @token=?
         """
          
-        params = [data['firstname'],data['lastname'],data['email'],data['sex'],data['height'],data['weight'], data['age'],data['toke']]
+        params = [data['firstname'],data['lastname'],data['email'],data['sex'],data['height'],data['weight'], data['age'],data['token']]
+        cursor = connection.cursor()
+        cursor.execute(sql, params)
+        result = cursor.fetchall()
+        cursor.commit()
+        cursor.close()
+        connection.close()
+        return jsonify({'status' : 0})
+
+class Plan:
+
+    @staticmethod
+    @app.route('/api/user/plan/create',methods=['POST'])
+    def CreatePlan():
+        data = request.get_json()
+        connection = DBConnection.NewConnection()
+        sql = """\
+        EXEC [dbo].[CreatePlans]    @description=?,
+                                    @type=?,
+	                                @name=?,
+	                                @token=?
+        """
+        params = [data['description'],data['type'],data['name'],data['token']]
         cursor = connection.cursor()
         cursor.execute(sql, params)
         result = cursor.fetchall()
@@ -220,7 +242,9 @@ class User:
         cursor.close()
         connection.close()
 
-class Plan:
+        response = jsonify({'status' : 1, 'message' : 'Create'})
+        return response
+
     @staticmethod
     @app.route('/api/user/plan/get',methods=['POST'])
     def GetPlan():
@@ -304,10 +328,10 @@ class Plan:
    
 class Block:
     @staticmethod
-    @app.route('/api/user/block/<int:id>', methods = ['POST'])
+    @app.route('/api/user/block', methods = ['POST'])
     def getFullPlanInfo(id):
          data = request.get_json()
-         planId = id
+         planId = data['id']
          print(postId)
          connection = DBConnection.NewConnection()  
          if (connection == None):
@@ -340,6 +364,32 @@ class Block:
          
          response = jsonify({'status' : 1, 'data': data})
          return response
+
+    @staticmethod
+    @app.route('/api/user/block/create', methods=['POST'])
+    def CreateBlock():
+        data = request.get_json()
+        connection = DBConnection.NewConnection()  
+
+        if (connection == None):
+             response = jsonify({'status' : 0, 'message': 'Unable to connect to the database'})
+             return response
+        
+        sql = """\
+        EXEC [dbo].[CreateExersiceBlock]    @name=?,
+                                            @planID=?,
+                                            @token=?
+        """
+         
+        params = [data['name'], data['planID'], data['token']]
+        cursor = connection.cursor()
+        cursor.execute(sql, params)
+        result = cursor.fetchall()
+        cursor.commit()
+        cursor.close()
+        connection.close()
+        response = jsonify({'status' : 1, 'message': 'Ok'})
+        return response
 
     @staticmethod
     @app.route('/api/user/block',methods=['PUT'])
@@ -381,6 +431,38 @@ class Block:
         connection.close()
 
 class Exercise:
+
+    @staticmethod
+    @app.route('/api/exercise',methods=['POST'])
+    def CreateExercise():
+        data = request.get_json()
+        connection = DBConnection.NewConnection()  
+
+        if (connection == None):
+             response = jsonify({'status' : 0, 'message': 'Unable to connect to the database'})
+             return response
+        
+        sql = """\
+        EXEC [dbo].[CreateExercises]    @kindOfSports=?,
+                                        @type=?,
+                                        @time=?,
+                                        @distance=?,
+                                        @weight=?,
+                                        @amount=?,
+                                        @blockID=?,
+                                        @token=?
+        """
+         
+        params = [data['kindOfSports'], data['type'], data['time'], data['distance'], data['weight'], data['amount'], data['blockID'], data['token']]
+        cursor = connection.cursor()
+        cursor.execute(sql, params)
+        result = cursor.fetchall()
+        cursor.commit()
+        cursor.close()
+        connection.close()
+        response = jsonify({'status' : 1, 'message': 'Ok'})
+        return response
+
     @staticmethod
     @app.route('/api/block/<id>/exercises/<token>', methods=['GET'])
     def GetExercises(id,token):

@@ -4,6 +4,7 @@ from flask import jsonify
 from flask_cors import CORS
 from validate_email import validate_email
 from db import DBConnection
+import base64
 import random
 import string
 import requests
@@ -15,10 +16,10 @@ news_controller = Blueprint('news_controller',__name__,url_prefix='/api/news')
 
 app.register_blueprint(news_controller)
 
-@app.route('/api/registration', methods=['POST'])
+@app.route('/registration', methods=['POST'])
 def api_registration():
-    
     print(request.get_json())
+    
     data = request.get_json()
     
     email = data['email']
@@ -46,8 +47,8 @@ def api_registration():
                                 @sex=?,
                                 @weight=?
     """
-
-    params = (data['email'], data['password'], data['firstname'], data['lastname'],data['userType'], data['age'], data['height'], data['sex'], data['weight'])
+    userType = 0 if data['role'] == 'User' else 1
+    params = (data['email'], data['password'], data['firstname'], data['lastname'],userType, data['age'], data['height'], data['sex'], data['weight'])
     cursor = connection.cursor()
     cursor.execute(sql, params)
     result = cursor.fetchall()
@@ -71,27 +72,19 @@ def generate_token():
 
 class Auth:
     @staticmethod
-    @app.route('/api/user/checkAuth', methods = ['POST'])
+    @app.route('/get_me', methods = ['GET'])
     def checkAuth():
-         data = request.get_json()
-         userId = 0;
-         if ('userId' in data):
-             userId = data['userId']
-             
-         token = "";
-         if ('token' in data):
-             token = data['token']
-             
+         token = request.headers['Authorization']
          connection = DBConnection.NewConnection()  
          if (connection == None):
              response = jsonify({'status' : 0, 'message': 'Unable to connect to the database'})
              return response
          sql = """\
-         EXEC [dbo].[CheckAuth]  @UserId=?,
+         EXEC [dbo].[CheckAuth]  
                                  @Token=?
          """
          
-         params = (userId, token)
+         params = (token)
          cursor = connection.cursor()
          cursor.execute(sql, params)
          result = cursor.fetchall()
@@ -101,10 +94,11 @@ class Auth:
          
          status = result[0][0]
          userType = result[0][1]
-         return jsonify({'status': status, 'userType': userType})
+         userId = result[0][2]
+         return jsonify({'status': status, 'userType': userType, 'user_id':userId})
     
     @staticmethod
-    @app.route('/api/user/auth', methods = ['POST'])
+    @app.route('/login', methods = ['POST'])
     def Auth():
         data  = request.get_json()
         email = ""
@@ -121,44 +115,34 @@ class Auth:
             return response
         sql = """\
         EXEC [dbo].[UserAuthorization]  @Email=?,
-                                         @Password=?,
-                                         @inToken=?
+                                        @Password=?,
+                                        @Token=?
         """
-         
-        params = (email, password, generate_token())
+        token = generate_token()
+        params = (email, password, token)
         cursor = connection.cursor()
         cursor.execute(sql, params)
         result = cursor.fetchall()
         cursor.commit()
          
-        userId = result[0][0]
-        outToken = result[0][1]
-         
-        if (userId == 0):
-            response = jsonify({'status' : 0, 'message': 'Incorrect email or password'})
-            return response
+        outToken = result[0][0]
         
-        response = jsonify({'status' : 1, 'userId' : userId, 'token': outToken})
+        response = jsonify({'status' : 1, 'token': token})
         return response
     
 class User:
     @staticmethod
-    @app.route('/api/user', methods = ['POST'])
-    def UserInfo(id):
-        data = request.get_json()
-        userId = 0
-        if ('userId' in data):
-            userId = data['userId']
+    @app.route('/user/profile', methods = ['GET'])
+    def UserInfo():
         connection = DBConnection.NewConnection()  
         if (connection == None):
             response = jsonify({'status' : 0, 'message': 'Unable to connect to the database'})
             return response
         sql = """\
-        EXEC [dbo].[GetUserInfo]  @userId=?
-                                  @token=?
+        EXEC [dbo].[GetUserInfo]  @token=?
         """
          
-        params = [userId, data['token']]
+        params = [request.headers['Authorization']]
         cursor = connection.cursor()
         cursor.execute(sql, params)
         result = cursor.fetchall()
@@ -171,7 +155,8 @@ class User:
         email = ""
         height = ""
         weight = ""
-        userType = None
+        role = None
+        sex = ""
         status = 1
         message = ""
         
@@ -181,20 +166,21 @@ class User:
             age = result[0][2]
             email = result[0][3]
             image = result[0][4]
-            userType = result[0][5]
+            role = result[0][7]
             height = result[0][6]
-            weight = result[0][7]
+            weight = result[0][5]
+            sex = result[0][8]
             status = 1
         
-        if (userType == None):
+        if (role == None):
             status = 0
             message = "User not found"
         
-        response = jsonify({'status' : status, 'message': message, 'firstname' : firstname, 'lastname' : lastname, 'age':age, 'email' : email, 'userType' : userType, 'weight':weight, 'height':height, 'image':image})
+        response = jsonify({'status' : status, 'message': message, 'firstname' : firstname, 'lastname' : lastname, 'age':age, 'email' : email, 'role' : role, 'weight':weight, 'height':height, 'image':image, 'sex':sex})
         return response
         
     @staticmethod
-    @app.route('/api/user', methods=['PUT'])
+    @app.route('/user', methods=['PUT'])
     def UpdateUser():
         data = request.get_json()
         connection = DBConnection.NewConnection()  
@@ -212,7 +198,7 @@ class User:
                                  @token=?
         """
          
-        params = [data['firstname'],data['lastname'],data['email'],data['sex'],data['height'],data['weight'], data['age'],data['token']]
+        params = [data['firstname'],data['lastname'],data['email'],data['sex'],data['height'],data['weight'], data['age'],request.headers['Authorization']]
         cursor = connection.cursor()
         cursor.execute(sql, params)
         result = cursor.fetchall()

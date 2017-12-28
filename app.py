@@ -211,7 +211,7 @@ class User:
 class Plan:
 
     @staticmethod
-    @app.route('/api/user/plan/create',methods=['POST'])
+    @app.route('/user/plan',methods=['POST'])
     def CreatePlan():
         data = request.get_json()
         connection = DBConnection.NewConnection()
@@ -221,7 +221,7 @@ class Plan:
 	                                @name=?,
 	                                @token=?
         """
-        params = [data['description'],data['type'],data['name'],data['token']]
+        params = [data['description'],data['type'],data['name'],request.headers['Authorization']]
         cursor = connection.cursor()
         cursor.execute(sql, params)
         result = cursor.fetchall()
@@ -233,15 +233,15 @@ class Plan:
         return response
 
     @staticmethod
-    @app.route('/api/user/plan/get',methods=['POST'])
+    @app.route('/user/plans',methods=['GET'])
     def GetPlan():
-        data = request.get_json()
+        
         connection = DBConnection.NewConnection()
         sql = """\
          EXEC [dbo].[GetPlans]       @token=?
          """
          
-        params = [data['token']]
+        params = [request.headers['Authorization']]
         cursor = connection.cursor()
         cursor.execute(sql, params)
         result = cursor.fetchall()
@@ -253,12 +253,13 @@ class Plan:
 
         for row in result:
              currentRow = {
-                 'duration':row[2],
+                 'type':row[3],
+                 'description':row[2],
                  'name':row[1],
                  'id':row[0]}
              data.append(currentRow)
         
-        response = jsonify({'status' : 1, 'plans': data})
+        response = jsonify(data)
         return response
 
     @staticmethod
@@ -290,12 +291,12 @@ class Plan:
         return response
         
     @staticmethod
-    @app.route('/api/user/plan/<int:id>/<token>',methods=['DELETE'])
+    @app.route('/api/user/plan/<int:id>',methods=['DELETE'])
     def DeletePlan(id, token):
         connection = DBConnection.NewConnection()
         sql = """\
         EXEC [dbo].[DeletePlan]    @id=?
-                                    @token=?
+                                   @token=?
         """
         params = [id, token]
         cursor = connection.cursor()
@@ -315,11 +316,8 @@ class Plan:
    
 class Block:
     @staticmethod
-    @app.route('/api/user/block', methods = ['POST'])
+    @app.route('/user/plan/<int:id>', methods = ['GET'])
     def getFullPlanInfo(id):
-         data = request.get_json()
-         planId = data['id']
-         print(postId)
          connection = DBConnection.NewConnection()  
          if (connection == None):
              response = jsonify({'status' : 0, 'message': 'Unable to connect to the database'})
@@ -330,7 +328,7 @@ class Block:
                                    @token=?
          """
          
-         params = [planId, data['token']]
+         params = [id, request.headers['Authorization']]
          cursor = connection.cursor()
          cursor.execute(sql, params)
          result = cursor.fetchall()

@@ -8,6 +8,7 @@ import base64
 import random
 import string
 import requests
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -524,12 +525,12 @@ class Exercise:
         cursor.close()
         connection.close()
 
-# class News:
-#     @staticmethod
-#     @app.route('/', methods=['GET'])
-#     def GetNews():
-        # apiUrl = 'https://newsapi.org/v2/everything?sources=nfl-news&sortBy=popularitylanguage=en&apiKey=5cf0ee4070bc4d38ab89ea05bec9935a'
-        # return requests.get(apiUrl).content
+class News:
+     @staticmethod
+     @app.route('/news', methods=['GET'])
+     def GetNews():
+         return jsonify(json.loads(open('D:/news.txt').read()))
+         
 
 if __name__ == "__main__":
     app.run()
